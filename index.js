@@ -198,13 +198,16 @@ const commands = [
     .setDescription('Abrir un ticket de soporte')
 ].map(c => c.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
 /* =======================
    READY
 ======================= */
-client.once('ready', async () => {
-  await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+client.once('clientReady', async () => {
+  await rest.put(
+    Routes.applicationCommands(client.user.id),
+    { body: commands }
+  );
   console.log(`✅ ${client.user.tag} listo`);
 });
 
