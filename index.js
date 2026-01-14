@@ -303,6 +303,48 @@ client.on('interactionCreate', async interaction => {
   /* ---------- SLASH ---------- */
   if (!interaction.isChatInputCommand()) return;
 
+  if (interaction.commandName === 'ticket') {
+
+    await interaction.deferReply({ ephemeral: true });
+
+    const row1 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('ticket_soporte')
+        .setLabel('🛡️ Soporte')
+        .setStyle(ButtonStyle.Primary),
+      new ButtonBuilder()
+        .setCustomId('ticket_bug')
+        .setLabel('💀 Reportar Bug')
+        .setStyle(ButtonStyle.Secondary)
+    );
+    
+    const row2 = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId('ticket_compras')
+        .setLabel('🪙 Compras / Donaciones')
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId('ticket_apelacion')
+        .setLabel('🫠 Apelaciones')
+        .setStyle(ButtonStyle.Danger)
+    );
+
+    return interaction.editReply({
+      embeds: [
+        baseEmbed()
+          .setTitle('🎟️ ¿NECESITAS DE NUESTRA AYUDA?')
+          .setDescription(
+            'Por favor elige una de nuestras opciones para ayuda de un soporte.\n\n' +
+            '🛡️ **Soporte** ➜ `Ayuda general discord y minecraft.`\n' +
+            '💀 **Bugs** ➜ `Avisar los errores o bugs que encuentras.`\n' +
+            '🪙 **Compras** ➜ `Recibir ayuda en la tienda.`\n' +
+            '🫠 **Apelaciones** ➜ `Para desbaneos (Evidencia).`'
+          )
+      ],
+      components: [row1, row2]
+    });
+  }
+    
   if (interaction.commandName === 'status') {
     const s = await mc.status(process.env.MC_IP, Number(process.env.MC_PORT));
     return interaction.reply({
