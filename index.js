@@ -515,10 +515,10 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  if (!interaction.isChatInputCommand()) return;
-  await interaction.deferReply({ ephemeral: true });
-
   if (interaction.commandName === 'verificacion') {
+
+    await interaction.deferReply();
+    
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return interaction.editReply('❌ Solo administradores');
 
