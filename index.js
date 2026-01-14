@@ -235,13 +235,13 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 client.once('ready', async () => {
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
-  await rest.put(
-    Routes.applicationGuildCommands(
-      client.user.id,
-      process.env.GUILD_ID
-    ),
-    { body: commands }
-  );
+await rest.put(
+  Routes.applicationGuildCommands(
+    client.user.id,
+    process.env.GUILD_ID
+  ),
+  { body: commands }
+);
 
   console.log(`✅ ${client.user.tag} listo`);
 });
@@ -428,20 +428,19 @@ client.on('interactionCreate', async interaction => {
     if (interaction.channel.id !== process.env.VERIFY_CHANNEL_ID)
       return interaction.reply({ content: '❌ Canal incorrecto', ephemeral: true });
 
-    return interaction.reply({
-      embeds: [
-        baseEmbed()
-          .setTitle('🔐 Verificación')
-          .setDescription('Pulsa el botón para verificarte')
-      ],
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('start_verify')
-            .setLabel('Verificarme')
-            .setStyle(ButtonStyle.Success)
-        )
-      ]
+return interaction.reply({
+  embeds: [baseEmbed().setTitle('🔐 Verificación')],
+  components: [row]
+});
+    
+components: [
+  new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('start_verify')
+      .setLabel('Verificarme')
+      .setStyle(ButtonStyle.Success)
+  )
+]
     });
   }
 
