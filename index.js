@@ -233,6 +233,8 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
    READY
 ======================= */
 client.once('ready', async () => {
+  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+  
   await rest.put(
     Routes.applicationGuildCommands(
       client.user.id,
@@ -414,10 +416,11 @@ client.on('interactionCreate', async interaction => {
         components: [row1, row2]
       });
     }
-    
-  if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'verificacion') {
+
+    await interaction.deferReply();
+    
     if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
       return interaction.reply({ content: '❌ Solo admins', ephemeral: true });
 
