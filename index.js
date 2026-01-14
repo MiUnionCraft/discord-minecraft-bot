@@ -422,38 +422,21 @@ if (interaction.isButton()) {
     }
 
 if (interaction.commandName === 'verificacion') {
-
-  await interaction.deferReply();
-
   if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
-    return interaction.editReply({ content: '❌ Solo administradores', ephemeral: true });
+    return interaction.reply({ content: '❌ Solo administradores', ephemeral: true });
 
-  if (interaction.channel.id !== process.env.VERIFY_CHANNEL_ID)
-    return interaction.editReply({ content: '❌ Canal incorrecto', ephemeral: true });
-
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('start_verify')
-      .setLabel('Verificarme')
-      .setStyle(ButtonStyle.Success)
-  );
-
-  return interaction.editReply({
-    embeds: [baseEmbed().setTitle('🔐 Verificación')],
-    components: [row]
+  return interaction.reply({
+    embeds: [baseEmbed().setTitle('🔐 Verificación').setDescription('Pulsa el botón para verificarte')],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('start_verify')
+          .setLabel('Verificarme')
+          .setStyle(ButtonStyle.Success)
+      )
+    ]
   });
 }
-    
-components: [
-  new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('start_verify')
-      .setLabel('Verificarme')
-      .setStyle(ButtonStyle.Success)
-  )
-]
-    });
-  }
 
     if (interaction.commandName === 'status') {
       
