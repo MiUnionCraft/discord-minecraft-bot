@@ -278,7 +278,7 @@ client.on('messageCreate', msg => {
 ======================= */
 client.on('interactionCreate', async interaction => {
 
-  if (interaction.isButton()) {
+if (interaction.isButton()) {
 
     if (interaction.customId === 'start_verify') {
 
@@ -309,6 +309,7 @@ client.on('interactionCreate', async interaction => {
         ],
         ephemeral: true
       });
+      return;
     }
 
     if (interaction.customId.startsWith('captcha_')) {
@@ -331,6 +332,7 @@ client.on('interactionCreate', async interaction => {
       logVerify(interaction.guild, interaction.user, true, 'Verificado');
 
       return interaction.reply({ content: '✅ Verificación completada', ephemeral: true });
+      return;
     }
   }
 
@@ -416,22 +418,31 @@ client.on('interactionCreate', async interaction => {
         ],
         components: [row1, row2]
       });
+      return;
     }
 
-  if (interaction.commandName === 'verificacion') {
+if (interaction.commandName === 'verificacion') {
 
-    await interaction.deferReply();
-    
-    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return interaction.reply({ content: '❌ Solo admins', ephemeral: true });
+  await interaction.deferReply();
 
-    if (interaction.channel.id !== process.env.VERIFY_CHANNEL_ID)
-      return interaction.reply({ content: '❌ Canal incorrecto', ephemeral: true });
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
+    return interaction.editReply({ content: '❌ Solo administradores', ephemeral: true });
 
-return interaction.reply({
-  embeds: [baseEmbed().setTitle('🔐 Verificación')],
-  components: [row]
-});
+  if (interaction.channel.id !== process.env.VERIFY_CHANNEL_ID)
+    return interaction.editReply({ content: '❌ Canal incorrecto', ephemeral: true });
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('start_verify')
+      .setLabel('Verificarme')
+      .setStyle(ButtonStyle.Success)
+  );
+
+  return interaction.editReply({
+    embeds: [baseEmbed().setTitle('🔐 Verificación')],
+    components: [row]
+  });
+}
     
 components: [
   new ActionRowBuilder().addComponents(
@@ -484,25 +495,6 @@ components: [
         embeds: [baseEmbed().setTitle('📦 Versión').setDescription(s.version.name)]
       });
     }
-
-    if (!interaction.isChatInputCommand()) return;
-
-  if (interaction.commandName === 'verificacion') {
-    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return interaction.reply({ content: '❌ Solo administradores', ephemeral: true });
-
-    return interaction.reply({
-      embeds: [baseEmbed().setTitle('🔐 Verificación').setDescription('Pulsa el botón para verificarte')],
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('start_verify')
-            .setLabel('Verificarme')
-            .setStyle(ButtonStyle.Success)
-        )
-      ]
-    });
-  }
 
     if (interaction.commandName === 'ip') {
 
