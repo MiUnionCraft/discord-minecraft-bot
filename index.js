@@ -333,7 +333,6 @@ client.on('interactionCreate', async interaction => {
   }
 
   if (!interaction.isChatInputCommand()) return;
-  await interaction.deferReply();
 
   try {
 
