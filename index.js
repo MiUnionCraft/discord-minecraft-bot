@@ -366,6 +366,60 @@ client.on('interactionCreate', async interaction => {
       });
     }
 
+      if (interaction.customId === 'start_verify') {
+
+        const a = Math.floor(Math.random() * 5) + 1;
+        const b = Math.floor(Math.random() * 5) + 1;
+        const correct = a + b;
+
+        captchaData.set(interaction.user.id, {
+          correct,
+          expires: Date.now() + 60000
+        });
+
+        return interaction.reply({
+          embeds: [
+            baseEmbed()
+              .setTitle('🔐 Captcha')
+              .setDescription(`${a} + ${b} = ?`)
+          ],
+          components: [
+            new ActionRowBuilder().addComponents(
+              [correct, correct + 1, correct - 1].map(n =>
+                new ButtonBuilder()
+                  .setCustomId(`captcha_${n}`)
+                  .setLabel(`${n}`)
+                  .setStyle(ButtonStyle.Secondary)
+              )
+            )
+          ],
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId.startsWith('captcha_')) {
+        const data = captchaData.get(interaction.user.id);
+        if (!data) return interaction.reply({ content: 'Captcha inválido', ephemeral: true });
+
+        const pick = Number(interaction.customId.split('_')[1]);
+        if (pick !== data.correct) {
+          logVerify(interaction.guild, interaction.user, false, 'Captcha incorrecto');
+          return interaction.member.kick('Falló verificación').catch(() => {});
+        }
+
+        const verified = interaction.guild.roles.cache.get(process.env.VERIFY_ROLE_ID);
+        const unverified = interaction.guild.roles.cache.get(process.env.UNVERIFIED_ROLE_ID);
+
+        await interaction.member.roles.remove(unverified).catch(() => {});
+        await interaction.member.roles.add(verified);
+
+        captchaData.delete(interaction.user.id);
+        logVerify(interaction.guild, interaction.user, true, 'Verificado');
+
+        return interaction.reply({ content: '✅ Verificación completada', ephemeral: true });
+      }
+    }
+
     if (interaction.commandName === 'status') {
       
       await interaction.deferReply();
@@ -443,93 +497,29 @@ client.on('interactionCreate', async interaction => {
     });
   }
 
-  if (interaction.isButton()) {
+    if (interaction.commandName === 'verificacion') {
 
-    if (interaction.customId === 'start_verify') {
+      await interaction.deferReply();
+    
+      if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
+        return interaction.reply({ content: '❌ Solo admins', ephemeral: true });
 
-      const now = Date.now();
-      const cd = verifyCooldown.get(interaction.user.id);
-      if (cd && now - cd < Number(process.env.VERIFY_COOLDOWN_SECONDS) * 1000)
-        return interaction.reply({ content: '⏳ Espera un momento.', ephemeral: true });
-
-      verifyCooldown.set(interaction.user.id, now);
-
-      const a = Math.floor(Math.random() * 5) + 1;
-      const b = Math.floor(Math.random() * 5) + 1;
-      const correct = a + b;
-
-      const opts = new Set([correct]);
-      while (opts.size < 3) opts.add(Math.floor(Math.random() * 10) + 1);
-
-      captchaData.set(interaction.user.id, {
-        correct,
-        attempts: 0,
-        expires: Date.now() + Number(process.env.CAPTCHA_EXPIRE_SECONDS) * 1000
-      });
+      if (interaction.channel.id !== process.env.VERIFY_CHANNEL_ID)
+        return interaction.reply({ content: '❌ Canal incorrecto', ephemeral: true });
 
       return interaction.reply({
         
-        embeds: [baseEmbed().setTitle('Captcha').setDescription(`${a} + ${b} = ?`)],
+        embeds: [
+          baseEmbed()
+            .setTitle('🔐 Verificación')
+            .setDescription('Pulsa el botón para verificarte')
+        ],
         components: [
           new ActionRowBuilder().addComponents(
-            [...opts].map(n =>
-              new ButtonBuilder().setCustomId(`captcha_${n}`).setLabel(`${n}`).setStyle(ButtonStyle.Secondary)
-            )
-          )
-        ],
-        ephemeral: true
-      });
-    }
-
-    if (interaction.customId.startsWith('captcha_')) {
-      const data = captchaData.get(interaction.user.id);
-      if (!data) return interaction.reply({ content: 'Captcha inválido.', ephemeral: true });
-
-      if (Date.now() > data.expires) {
-        captchaData.delete(interaction.user.id);
-        return interaction.reply({ content: 'Captcha expirado.', ephemeral: true });
-      }
-
-      const pick = Number(interaction.customId.split('_')[1]);
-      data.attempts++;
-
-      if (pick !== data.correct) {
-        if (data.attempts >= Number(process.env.CAPTCHA_MAX_ATTEMPTS)) {
-          captchaData.delete(interaction.user.id);
-          logVerify(interaction.guild, interaction.user, false, 'Falló captcha');
-          return interaction.member.kick('Falló captcha').catch(() => {});
-        }
-        return interaction.reply({ content: 'Incorrecto.', ephemeral: true });
-      }
-
-      const verified = interaction.guild.roles.cache.get(process.env.VERIFY_ROLE_ID);
-      const unverified = interaction.guild.roles.cache.get(process.env.UNVERIFIED_ROLE_ID);
-
-      await interaction.member.roles.remove(unverified).catch(() => {});
-      await interaction.member.roles.add(verified);
-      captchaData.delete(interaction.user.id);
-
-      logVerify(interaction.guild, interaction.user, true, 'Verificado');
-
-      return interaction.reply({ content: '✅ Verificación completada.', ephemeral: true });
-    }
-  }
-
-  if (interaction.commandName === 'verificacion') {
-
-    await interaction.deferReply();
-    
-    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
-      return interaction.editReply('❌ Solo administradores');
-
-    if (interaction.channel.id !== process.env.VERIFY_CHANNEL_ID)
-      return interaction.editReply('❌ Canal incorrecto');
-
-    return interaction.editReply({
-      embeds: [baseEmbed().setTitle('🔐 Verificación').setDescription('Pulsa para verificarte')],
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('start_verify').setLabel('Verificarme').setStyle(ButtonStyle.Success)
+            new ButtonBuilder()
+              .setCustomId('start_verify')
+              .setLabel('Verificarme')
+              .setStyle(ButtonStyle.Success)
         )
       ]
     });
