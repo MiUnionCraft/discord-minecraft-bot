@@ -337,6 +337,8 @@ client.on('interactionCreate', async interaction => {
   try {
 
     if (interaction.commandName === 'ticket') {
+      
+      await interaction.deferReply();
 
       const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('ticket_soporte').setLabel('🛡️ Soporte').setStyle(ButtonStyle.Primary),
@@ -416,6 +418,9 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'embed') {
+
+      await interaction.deferReply();
+      
       if (!interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID))
         return interaction.editReply({ embeds: [baseEmbed().setDescription('❌ No autorizado').setColor(0xef4444)] });
 
