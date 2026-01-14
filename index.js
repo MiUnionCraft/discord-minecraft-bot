@@ -227,23 +227,30 @@ client.on('messageCreate', msg => {
   }
 });
 
-/* =======================
-   INTERACCIONES
-======================= */
 client.on('interactionCreate', async interaction => {
 
-  /* ---------- BOTONES ---------- */
+  /* =======================
+     BOTONES
+  ======================= */
   if (interaction.isButton()) {
 
+    /* ===== VERIFICACIÓN ===== */
     if (interaction.customId === 'start_verify') {
       const a = Math.floor(Math.random() * 5) + 1;
       const b = Math.floor(Math.random() * 5) + 1;
       const correct = a + b;
 
-      captchaData.set(interaction.user.id, { correct });
+      captchaData.set(interaction.user.id, {
+        correct,
+        expires: Date.now() + 60000
+      });
 
       return interaction.reply({
-        embeds: [baseEmbed().setTitle('🔐 Captcha').setDescription(`${a} + ${b} = ?`)],
+        embeds: [
+          baseEmbed()
+            .setTitle('🔐 Captcha')
+            .setDescription(`${a} + ${b} = ?`)
+        ],
         components: [
           new ActionRowBuilder().addComponents(
             [correct, correct + 1, correct - 1].map(n =>
@@ -260,23 +267,31 @@ client.on('interactionCreate', async interaction => {
 
     if (interaction.customId.startsWith('captcha_')) {
       const data = captchaData.get(interaction.user.id);
-      if (!data) return;
+      if (!data)
+        return interaction.reply({ content: 'Captcha inválido', ephemeral: true });
 
       const pick = Number(interaction.customId.split('_')[1]);
       if (pick !== data.correct) {
         logVerify(interaction.guild, interaction.user, false, 'Captcha incorrecto');
-        return interaction.member.kick();
+        return interaction.member.kick('Falló verificación').catch(() => {});
       }
 
-      await interaction.member.roles.remove(process.env.UNVERIFIED_ROLE_ID);
-      await interaction.member.roles.add(process.env.VERIFY_ROLE_ID);
+      const verified = interaction.guild.roles.cache.get(process.env.VERIFY_ROLE_ID);
+      const unverified = interaction.guild.roles.cache.get(process.env.UNVERIFIED_ROLE_ID);
+
+      await interaction.member.roles.remove(unverified).catch(() => {});
+      await interaction.member.roles.add(verified);
 
       captchaData.delete(interaction.user.id);
       logVerify(interaction.guild, interaction.user, true, 'Verificado');
 
-      return interaction.reply({ content: '✅ Verificado', ephemeral: true });
+      return interaction.reply({
+        content: '✅ Verificación completada',
+        ephemeral: true
+      });
     }
 
+    /* ===== CREAR TICKET ===== */
     if (interaction.customId.startsWith('ticket_')) {
       const type = interaction.customId.split('_')[1];
 
@@ -285,98 +300,262 @@ client.on('interactionCreate', async interaction => {
         type: ChannelType.GuildText,
         parent: process.env.TICKET_CATEGORY_ID,
         permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel] },
-          { id: process.env.STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel] }
+          {
+            id: interaction.guild.id,
+            deny: [PermissionsBitField.Flags.ViewChannel]
+          },
+          {
+            id: interaction.user.id,
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages
+            ]
+          },
+          {
+            id: process.env.STAFF_ROLE_ID,
+            allow: [
+              PermissionsBitField.Flags.ViewChannel,
+              PermissionsBitField.Flags.SendMessages
+            ]
+          }
         ]
       });
 
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('reclamar')
+          .setLabel('✋🏻 Reclamar')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('cerrar')
+          .setLabel('🔒 Cerrar')
+          .setStyle(ButtonStyle.Danger)
+      );
+
       await channel.send({
-        embeds: [baseEmbed().setTitle('🎫 Ticket Abierto').setDescription(`Categoría: **${type}**`)]
+        embeds: [
+          baseEmbed()
+            .setTitle('🎫 Ticket Abierto')
+            .setDescription(`Categoría: **${type}**\nUn miembro del staff te atenderá pronto.`)
+        ],
+        components: [row]
       });
 
       scheduleClose(channel);
-      return interaction.reply({ content: 'Ticket creado', ephemeral: true });
+
+      return interaction.reply({
+        embeds: [
+          baseEmbed().setDescription('✅ Ticket creado correctamente')
+        ],
+        ephemeral: true
+      });
     }
+
+    /* ===== RECLAMAR ===== */
+    if (interaction.customId === 'reclamar') {
+      if (!interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID)) {
+        return interaction.reply({
+          embeds: [
+            baseEmbed()
+              .setDescription('❌ Solo el staff puede reclamar')
+              .setColor(0xef4444)
+          ],
+          ephemeral: true
+        });
+      }
+
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle('✋🏻 Ticket Reclamado')
+            .setDescription(`Este ticket ha sido reclamado por **${interaction.user.tag}**`)
+        ]
+      });
+    }
+
+    /* ===== CERRAR ===== */
+    if (interaction.customId === 'cerrar') {
+      return closeTicket(
+        interaction.channel,
+        '🔒 Ticket cerrado manualmente por el staff'
+      );
+    }
+
+    return;
   }
 
-  /* ---------- SLASH ---------- */
+  /* =======================
+     SLASH COMMANDS
+  ======================= */
   if (!interaction.isChatInputCommand()) return;
 
-  if (interaction.commandName === 'ticket') {
+  try {
 
-    await interaction.deferReply({ ephemeral: true });
+    /* ===== /ticket ===== */
+    if (interaction.commandName === 'ticket') {
 
-    const row1 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('ticket_soporte')
-        .setLabel('🛡️ Soporte')
-        .setStyle(ButtonStyle.Primary),
-      new ButtonBuilder()
-        .setCustomId('ticket_bug')
-        .setLabel('💀 Reportar Bug')
-        .setStyle(ButtonStyle.Secondary)
-    );
-    
-    const row2 = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId('ticket_compras')
-        .setLabel('🪙 Compras / Donaciones')
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId('ticket_apelacion')
-        .setLabel('🫠 Apelaciones')
-        .setStyle(ButtonStyle.Danger)
-    );
+      await interaction.deferReply({ ephemeral: true });
 
-    return interaction.editReply({
-      embeds: [
-        baseEmbed()
-          .setTitle('🎟️ ¿NECESITAS DE NUESTRA AYUDA?')
-          .setDescription(
-            'Por favor elige una de nuestras opciones para ayuda de un soporte.\n\n' +
-            '🛡️ **Soporte** ➜ `Ayuda general discord y minecraft.`\n' +
-            '💀 **Bugs** ➜ `Avisar los errores o bugs que encuentras.`\n' +
-            '🪙 **Compras** ➜ `Recibir ayuda en la tienda.`\n' +
-            '🫠 **Apelaciones** ➜ `Para desbaneos (Evidencia).`'
+      const row1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket_soporte')
+          .setLabel('🛡️ Soporte')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId('ticket_bug')
+          .setLabel('💀 Reportar Bug')
+          .setStyle(ButtonStyle.Secondary)
+      );
+
+      const row2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('ticket_compras')
+          .setLabel('🪙 Compras / Donaciones')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('ticket_apelacion')
+          .setLabel('🫠 Apelaciones')
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      return interaction.editReply({
+        embeds: [
+          baseEmbed()
+            .setTitle('🎟️ ¿NECESITAS DE NUESTRA AYUDA?')
+            .setDescription(
+              'Por favor elige una de nuestras opciones para ayuda de un soporte.\n\n' +
+              '🛡️ **Soporte** ➜ `Ayuda general discord y minecraft.`\n' +
+              '💀 **Bugs** ➜ `Avisar los errores o bugs que encuentras.`\n' +
+              '🪙 **Compras** ➜ `Recibir ayuda en la tienda.`\n' +
+              '🫠 **Apelaciones** ➜ `Para desbaneos (Evidencia).`'
+            )
+        ],
+        components: [row1, row2]
+      });
+    }
+
+    /* ===== /verificacion ===== */
+    if (interaction.commandName === 'verificacion') {
+      if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+        return interaction.reply({
+          content: '❌ Solo administradores',
+          ephemeral: true
+        });
+      }
+
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle('🔐 Verificación')
+            .setDescription('Pulsa el botón para verificarte')
+        ],
+        components: [
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('start_verify')
+              .setLabel('Verificarme')
+              .setStyle(ButtonStyle.Success)
           )
-      ],
-      components: [row1, row2]
-    });
-  }
-    
-  if (interaction.commandName === 'status') {
-    const s = await mc.status(process.env.MC_IP, Number(process.env.MC_PORT));
-    return interaction.reply({
-      embeds: [baseEmbed().setTitle('🟢 Servidor Online').setDescription(`Jugadores: ${s.players.online}/${s.players.max}`)]
-    });
-  }
+        ]
+      });
+    }
 
-  if (interaction.commandName === 'players') {
-    const s = await mc.status(process.env.MC_IP, Number(process.env.MC_PORT));
-    return interaction.reply({
-      embeds: [baseEmbed().setTitle('👥 Jugadores').setDescription(s.players.sample?.map(p => p.name).join('\n') || 'Nadie')]
-    });
-  }
+    /* ===== /status ===== */
+    if (interaction.commandName === 'status') {
+      const s = await mc.status(
+        process.env.MC_IP,
+        Number(process.env.MC_PORT)
+      );
 
-  if (interaction.commandName === 'version') {
-    const s = await mc.status(process.env.MC_IP, Number(process.env.MC_PORT));
-    return interaction.reply({ embeds: [baseEmbed().setTitle('📦 Versión').setDescription(s.version.name)] });
-  }
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle('🟢 Servidor Online')
+            .setDescription(`Jugadores: **${s.players.online}/${s.players.max}**`)
+            .setColor(0x22c55e)
+        ]
+      });
+    }
 
-  if (interaction.commandName === 'ip') {
-    return interaction.reply({ embeds: [baseEmbed().setTitle('🌐 IP').setDescription(process.env.MC_IP)] });
-  }
+    /* ===== /players ===== */
+    if (interaction.commandName === 'players') {
+      const s = await mc.status(
+        process.env.MC_IP,
+        Number(process.env.MC_PORT)
+      );
 
-  if (interaction.commandName === 'verificacion') {
-    return interaction.reply({
-      embeds: [baseEmbed().setTitle('🔐 Verificación')],
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder().setCustomId('start_verify').setLabel('Verificarme').setStyle(ButtonStyle.Success)
-        )
-      ]
-    });
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle('👥 Jugadores Conectados')
+            .setDescription(
+              s.players.sample?.map(p => `• ${p.name}`).join('\n') ||
+              'No hay jugadores conectados'
+            )
+        ]
+      });
+    }
+
+    /* ===== /version ===== */
+    if (interaction.commandName === 'version') {
+      const s = await mc.status(
+        process.env.MC_IP,
+        Number(process.env.MC_PORT)
+      );
+
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle('📦 Versión')
+            .setDescription(s.version.name)
+        ]
+      });
+    }
+
+    /* ===== /ip ===== */
+    if (interaction.commandName === 'ip') {
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle('🌐 IP del Servidor')
+            .setDescription(process.env.MC_IP)
+        ]
+      });
+    }
+
+    /* ===== /embed ===== */
+    if (interaction.commandName === 'embed') {
+      if (!interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID)) {
+        return interaction.reply({
+          embeds: [
+            baseEmbed()
+              .setDescription('❌ No autorizado')
+              .setColor(0xef4444)
+          ],
+          ephemeral: true
+        });
+      }
+
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle(interaction.options.getString('titulo'))
+            .setDescription(interaction.options.getString('descripcion'))
+        ]
+      });
+    }
+
+  } catch (err) {
+    console.error(err);
+    if (interaction.replied || interaction.deferred) {
+      interaction.editReply({
+        embeds: [
+          baseEmbed()
+            .setDescription('❌ Ocurrió un error')
+            .setColor(0xef4444)
+        ]
+      });
+    }
   }
 });
 
