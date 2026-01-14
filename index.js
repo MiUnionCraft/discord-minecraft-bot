@@ -365,7 +365,11 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'status') {
+      
+      await interaction.deferReply();
+      
       const s = await mc.status(process.env.MC_IP, Number(process.env.MC_PORT));
+      
       return interaction.editReply({
         embeds: [
           baseEmbed()
