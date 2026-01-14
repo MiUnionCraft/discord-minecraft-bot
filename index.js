@@ -394,6 +394,9 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'version') {
+
+      await interaction.deferReply();
+      
       const s = await mc.status(process.env.MC_IP, Number(process.env.MC_PORT));
       
       return interaction.editReply({
@@ -403,6 +406,8 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'ip') {
+
+      await interaction.deferReply();
       
       return interaction.editReply({
         
