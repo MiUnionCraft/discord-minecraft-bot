@@ -394,7 +394,7 @@ client.on('interactionCreate', async interaction => {
     /* ===== /ticket ===== */
     if (interaction.commandName === 'ticket') {
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply();
 
       const row1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
