@@ -71,17 +71,24 @@ const escapeHTML = t => {
 /* =======================
    LOG VERIFICACIÓN
 ======================= */
-client.once('clientReady', async () => {
-  await rest.put(
-    Routes.applicationGuildCommands(client.user.id, process.env.GUILD_ID),
-    { body: commands }
-  );
-  console.log(`✅ ${client.user.tag} listo`);
-});
+function logVerify(guild, user, success, reason) {
+  const ch = guild.channels.cache.get(process.env.VERIFY_LOG_CHANNEL_ID);
+  if (!ch) return;
 
-client.on('guildMemberAdd', async member => {
-  const role = member.guild.roles.cache.get(process.env.UNVERIFIED_ROLE_ID);
-  if (role) await member.roles.add(role).catch(() => {});
+  ch.send({
+    embeds: [
+      new EmbedBuilder()
+        .setColor(success ? 0x22c55e : 0xef4444)
+        .setTitle(success ? '✅ Verificación Exitosa' : '❌ Verificación Fallida')
+        .addFields(
+          { name: 'Usuario', value: user.tag, inline: true },
+          { name: 'ID', value: user.id, inline: true },
+          { name: 'Motivo', value: reason }
+        )
+        .setTimestamp()
+    ]
+  });
+}
 /* =======================
    CIERRE + LOG HTML
 ======================= */
@@ -225,16 +232,19 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 /* =======================
    READY
 ======================= */
-client.once('clientReady', async () => {
+client.once('ready', async () => {
   await rest.put(
-    Routes.applicationCommands(client.user.id),
+    Routes.applicationGuildCommands(
+      client.user.id,
+      process.env.GUILD_ID
+    ),
     { body: commands }
   );
   console.log(`✅ ${client.user.tag} listo`);
 });
 
 /* =======================
-   ANTI-ALT + BLOQUEO
+   ANTI ALT
 ======================= */
 client.on('guildMemberAdd', async member => {
   const unverified = member.guild.roles.cache.get(process.env.UNVERIFIED_ROLE_ID);
@@ -246,16 +256,9 @@ client.on('guildMemberAdd', async member => {
   const age = (Date.now() - member.user.createdTimestamp) / 86400000;
 
   if (age < minAge) {
-    logVerify(member.guild, member.user, false, 'Cuenta nueva');
+    logVerify(member.guild, member.user, false, 'Cuenta demasiado nueva');
     return member.kick('Cuenta demasiado nueva');
   }
-
-  setTimeout(async () => {
-    if (member.roles.cache.has(unverified.id)) {
-      logVerify(member.guild, member.user, false, 'No se verificó a tiempo');
-      await member.kick('No se verificó a tiempo').catch(() => {});
-    }
-  }, (Number(process.env.VERIFY_TIMEOUT_MINUTES) || 10) * 60000);
 });
 
 /* =======================
@@ -273,6 +276,60 @@ client.on('messageCreate', msg => {
 client.on('interactionCreate', async interaction => {
 
   if (interaction.isButton()) {
+
+    if (interaction.customId === 'start_verify') {
+
+      const a = Math.floor(Math.random() * 5) + 1;
+      const b = Math.floor(Math.random() * 5) + 1;
+      const correct = a + b;
+
+      captchaData.set(interaction.user.id, {
+        correct,
+        expires: Date.now() + 60000
+      });
+
+      return interaction.reply({
+        embeds: [
+          baseEmbed()
+            .setTitle('🔐 Captcha')
+            .setDescription(`${a} + ${b} = ?`)
+        ],
+        components: [
+          new ActionRowBuilder().addComponents(
+            [correct, correct + 1, correct - 1].map(n =>
+              new ButtonBuilder()
+                .setCustomId(`captcha_${n}`)
+                .setLabel(`${n}`)
+                .setStyle(ButtonStyle.Secondary)
+            )
+          )
+        ],
+        ephemeral: true
+      });
+    }
+
+    if (interaction.customId.startsWith('captcha_')) {
+      const data = captchaData.get(interaction.user.id);
+      if (!data) return interaction.reply({ content: 'Captcha inválido', ephemeral: true });
+
+      const pick = Number(interaction.customId.split('_')[1]);
+      if (pick !== data.correct) {
+        logVerify(interaction.guild, interaction.user, false, 'Captcha incorrecto');
+        return interaction.member.kick('Falló verificación').catch(() => {});
+      }
+
+      const verified = interaction.guild.roles.cache.get(process.env.VERIFY_ROLE_ID);
+      const unverified = interaction.guild.roles.cache.get(process.env.UNVERIFIED_ROLE_ID);
+
+      await interaction.member.roles.remove(unverified).catch(() => {});
+      await interaction.member.roles.add(verified);
+
+      captchaData.delete(interaction.user.id);
+      logVerify(interaction.guild, interaction.user, true, 'Verificado');
+
+      return interaction.reply({ content: '✅ Verificación completada', ephemeral: true });
+    }
+  }
 
     if (interaction.customId.startsWith('ticket_')) {
       const type = interaction.customId.split('_')[1];
@@ -357,46 +414,31 @@ client.on('interactionCreate', async interaction => {
         components: [row1, row2]
       });
     }
+    
+  if (!interaction.isChatInputCommand()) return;
 
-    if (interaction.customId === 'start_verify') {
-      const a = Math.floor(Math.random() * 5) + 1;
-      const b = Math.floor(Math.random() * 5) + 1;
-      const correct = a + b;
+  if (interaction.commandName === 'verificacion') {
+    if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator))
+      return interaction.reply({ content: '❌ Solo admins', ephemeral: true });
 
-      captchaData.set(interaction.user.id, correct);
+    if (interaction.channel.id !== process.env.VERIFY_CHANNEL_ID)
+      return interaction.reply({ content: '❌ Canal incorrecto', ephemeral: true });
 
-      return interaction.reply({
-        embeds: [baseEmbed().setTitle('🔐 Verificación').setDescription(`${a} + ${b} = ?`)],
-        components: [
-          new ActionRowBuilder().addComponents(
-            [correct, correct + 1, correct + 2].map(n =>
-              new ButtonBuilder()
-                .setCustomId(`captcha_${n}`)
-                .setLabel(String(n))
-                .setStyle(ButtonStyle.Secondary)
-            )
-          )
-        ],
-        ephemeral: true
-      });
-    }
-
-    if (interaction.customId.startsWith('captcha_')) {
-      const correct = captchaData.get(interaction.user.id);
-      const choice = Number(interaction.customId.split('_')[1]);
-
-      if (choice !== correct)
-        return interaction.reply({ content: '❌ Incorrecto', ephemeral: true });
-
-      const verified = interaction.guild.roles.cache.get(process.env.VERIFY_ROLE_ID);
-      const unverified = interaction.guild.roles.cache.get(process.env.UNVERIFIED_ROLE_ID);
-
-      if (verified) await interaction.member.roles.add(verified).catch(() => {});
-      if (unverified) await interaction.member.roles.remove(unverified).catch(() => {});
-
-      captchaData.delete(interaction.user.id);
-      return interaction.reply({ content: '✅ Verificado correctamente', ephemeral: true });
-    }
+    return interaction.reply({
+      embeds: [
+        baseEmbed()
+          .setTitle('🔐 Verificación')
+          .setDescription('Pulsa el botón para verificarte')
+      ],
+      components: [
+        new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId('start_verify')
+            .setLabel('Verificarme')
+            .setStyle(ButtonStyle.Success)
+        )
+      ]
+    });
   }
 
     if (interaction.commandName === 'status') {
