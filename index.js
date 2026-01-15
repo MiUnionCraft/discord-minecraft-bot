@@ -428,7 +428,7 @@ client.on('interactionCreate', async interaction => {
           baseEmbed()
             .setTitle('🎟️ ¿NECESITAS DE NUESTRA AYUDA?')
             .setDescription(
-              'Por favor elige una de nuestras opciones, sé claro y directo con lo que necesitas así nuestro <@914728126066622545> con gusto te atenderá.\n\n' +
+              'Por favor elige una de nuestras opciones, sé claro y directo con lo que necesitas así nuestro <@&914728126066622545> con gusto te atenderá.\n\n' +
               '🛡️ **Soporte** ➜ `Ayuda general discord y minecraft.`\n' +
               '💀 **Bugs** ➜ `Avisar los errores o bugs que encuentras.`\n' +
               '🪙 **Compras** ➜ `Recibir ayuda en la tienda.`\n' +
