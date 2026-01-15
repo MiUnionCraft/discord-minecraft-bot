@@ -340,7 +340,7 @@ client.on('interactionCreate', async interaction => {
             .setDescription(
               `👤 Usuario: ${interaction.user}\n` +
               `📂 Categoría: **${type}**\n\n` +
-              `Un miembro del staff atenderá este ticket lo antes posible.`
+              `Ten paciencia, pronto serás atendido por nuestros staffs en línea, recuerda ser claro y directo con lo que necesitas.`
             )
         ],
         components: [row]
@@ -428,7 +428,7 @@ client.on('interactionCreate', async interaction => {
           baseEmbed()
             .setTitle('🎟️ ¿NECESITAS DE NUESTRA AYUDA?')
             .setDescription(
-              'Por favor elige una de nuestras opciones para ayuda de un soporte.\n\n' +
+              'Por favor elige una de nuestras opciones, sé claro y directo con lo que necesitas así nuestro <@914728126066622545> con gusto te atenderá.\n\n' +
               '🛡️ **Soporte** ➜ `Ayuda general discord y minecraft.`\n' +
               '💀 **Bugs** ➜ `Avisar los errores o bugs que encuentras.`\n' +
               '🪙 **Compras** ➜ `Recibir ayuda en la tienda.`\n' +
@@ -452,13 +452,13 @@ client.on('interactionCreate', async interaction => {
         embeds: [
           baseEmbed()
             .setTitle('🔐 Verificación')
-            .setDescription('Pulsa el botón para verificarte')
+            .setDescription('Hola querido usuario, este es nuestro sistema de verificación, antes de que todos los canales sean activados, necesitamos que presiones el botón para interactuar en nuestra comunidad.')
         ],
         components: [
           new ActionRowBuilder().addComponents(
             new ButtonBuilder()
               .setCustomId('start_verify')
-              .setLabel('Verificarme')
+              .setLabel('🤖 Verificarme')
               .setStyle(ButtonStyle.Success)
           )
         ]
