@@ -333,10 +333,15 @@ client.on('interactionCreate', async interaction => {
       );
 
       await channel.send({
+        content: `📢 <@&${process.env.STAFF_ROLE_ID}>`,
         embeds: [
           baseEmbed()
             .setTitle('🎫 Ticket Abierto')
-            .setDescription(`Categoría: **${type}**\nUn miembro del staff te atenderá pronto.`)
+            .setDescription(
+              `👤 Usuario: ${interaction.user}\n` +
+              `📂 Categoría: **${type}**\n\n` +
+              `Un miembro del staff atenderá este ticket lo antes posible.`
+            )
         ],
         components: [row]
       });
