@@ -52,7 +52,7 @@ const baseEmbed = () =>
    AUTO CIERRE
 ======================= */
 const timeouts = new Map();
-const warnings = new Map();
+const reminderIntervals = new Map();
 
 const INACTIVITY = Number(process.env.TICKET_INACTIVITY_MINUTES) || 1140;
 const WARNING = Number(process.env.TICKET_WARNING_MINUTES) || 10;
@@ -147,34 +147,42 @@ ${messages.map(m => `
   }
 
   clearTimeout(timeouts.get(channel.id));
-  clearTimeout(warnings.get(channel.id));
+  clearInterval(reminderIntervals.get(channel.id));
+
+  timeouts.delete(channel.id);
+  reminderIntervals.delete(channel.id);
+  
   await channel.delete().catch(() => {});
 }
 
 /* =======================
    PROGRAMAR AUTO CIERRE
 ======================= */
-function scheduleClose(channel) {
+function scheduleClose(channel, ownerId) {
   clearTimeout(timeouts.get(channel.id));
-  clearTimeout(warnings.get(channel.id));
+  clearInterval(reminderIntervals.get(channel.id));
 
-  warnings.set(channel.id, setTimeout(() => {
+  const interval = setInterval(() => {
     channel.send({
       content: ownerId ? `<@${ownerId}>` : null,
       embeds: [
         baseEmbed()
           .setTitle('⏰ Inactividad detectada')
           .setDescription(
-            `No se ha detectado actividad en el ticket.\n` +
-            `Si no respondes, este ticket se cerrará automáticamente en **24 horas**.`
+            'Este ticket no ha recibido respuesta del creador.\n\n' +
+            '🕒 **Si no respondes, se cerrará automáticamente en 24 horas.**'
           )
       ]
     }).catch(() => {});
-  }, 10 * 60000));
+  }, 10 * 60 * 1000);
 
-  timeouts.set(channel.id, setTimeout(() => {
+  reminderIntervals.set(channel.id, interval);
+
+  const timeout = setTimeout(() => {
     closeTicket(channel, '⏰ Ticket cerrado automáticamente por inactividad');
-  }, 24 * 60 * 60000));
+  }, 24 * 60 * 60 * 1000);
+  
+  timeouts.set(channel.id, timeout);
 }
 
 /* =======================
@@ -237,25 +245,7 @@ client.on('messageCreate', async msg => {
   if (!ownerId) return;
 
   if (msg.author.id === ownerId) {
-    const hadWarning = warnings.has(msg.channel.id);
-    
     scheduleClose(msg.channel, ownerId);
-
-    if (hadWarning) {
-      clearTimeout(warnings.get(msg.channel.id));
-      warnings.delete(msg.channel.id);
-      
-      try {
-        await msg.author.send({
-          embeds: [
-            baseEmbed()
-              .setDescription('🔄 Has respondido a tiempo.\nLa inactividad del ticket ha sido reiniciada.')
-          ]
-        });
-      } catch (e) {
-        console.log(`No se pudo enviar DM al usuario ${ownerId}`);
-      }
-    }
   }
 });
 
@@ -364,7 +354,7 @@ client.on('interactionCreate', async interaction => {
         components: [row]
       });
 
-      scheduleClose(channel);
+      scheduleClose(channel, interaction.user.id);
 
       return interaction.reply({
         embeds: [
