@@ -163,15 +163,18 @@ function scheduleClose(channel) {
       content: ownerId ? `<@${ownerId}>` : null,
       embeds: [
         baseEmbed()
-          .setTitle('⏰ Inactividad')
-          .setDescription(`No se ha detectado actividad.\nEste ticket se cerrará en **${WARNING} minutos** si no respondes.`)
+          .setTitle('⏰ Inactividad detectada')
+          .setDescription(
+            `No se ha detectado actividad en el ticket.\n` +
+            `Si no respondes, este ticket se cerrará automáticamente en **24 horas**.`
+          )
       ]
     }).catch(() => {});
-  }, (INACTIVITY - WARNING) * 60000));
+  }, 10 * 60000));
 
   timeouts.set(channel.id, setTimeout(() => {
     closeTicket(channel, '⏰ Ticket cerrado automáticamente por inactividad');
-  }, INACTIVITY * 60000));
+  }, 24 * 60 * 60000));
 }
 
 /* =======================
