@@ -229,7 +229,7 @@ client.on('guildMemberAdd', async member => {
 /* =======================
    RESET INACTIVIDAD
 ======================= */
-client.on('messageCreate', msg => {
+client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
   if (!msg.channel.name?.startsWith('ticket-')) return;
 
