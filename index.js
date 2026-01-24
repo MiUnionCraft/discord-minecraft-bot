@@ -54,8 +54,8 @@ const baseEmbed = () =>
 const timeouts = new Map();
 const warnings = new Map();
 
-const INACTIVITY = Number(process.env.TICKET_INACTIVITY_MINUTES) || 30;
-const WARNING = Number(process.env.TICKET_WARNING_MINUTES) || 5;
+const INACTIVITY = Number(process.env.TICKET_INACTIVITY_MINUTES) || 1140;
+const WARNING = Number(process.env.TICKET_WARNING_MINUTES) || 10;
 
 /* =======================
    HTML ESCAPE (SEGURO)
