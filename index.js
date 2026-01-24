@@ -160,7 +160,12 @@ function scheduleClose(channel) {
 
   warnings.set(channel.id, setTimeout(() => {
     channel.send({
-      embeds: [baseEmbed().setTitle('⏰ Inactividad').setDescription(`Se cerrará en ${WARNING} minutos`)]
+      content: ownerId ? `<@${ownerId}>` : null,
+      embeds: [
+        baseEmbed()
+          .setTitle('⏰ Inactividad')
+          .setDescription(`No se ha detectado actividad.\nEste ticket se cerrará en **${WARNING} minutos** si no respondes.`)
+      ]
     }).catch(() => {});
   }, (INACTIVITY - WARNING) * 60000));
 
@@ -222,8 +227,25 @@ client.on('guildMemberAdd', async member => {
    RESET INACTIVIDAD
 ======================= */
 client.on('messageCreate', msg => {
-  if (!msg.author.bot && msg.channel.name?.startsWith('ticket-')) {
+  if (msg.author.bot) return;
+  if (!msg.channel.name?.startsWith('ticket-')) return;
+
+  const ownerId = msg.channel.topic?.split('owner:')[1];
+  if (!ownerId) return;
+
+  if (msg.author.id === ownerId) {
+    const hadWarning = warnings.has(msg.channel.id);
+    
     scheduleClose(msg.channel);
+
+    if (hadWarning) {
+      msg.channel.send({
+        embeds: [
+          baseEmbed()
+            .setDescription('🔄 Has respondido a tiempo.\nLa inactividad del ticket ha sido reiniciada.')
+        ]
+      }).catch(() => {});
+    }
   }
 });
 
@@ -299,6 +321,7 @@ client.on('interactionCreate', async interaction => {
         name: `ticket-${interaction.user.username}`,
         type: ChannelType.GuildText,
         parent: process.env.TICKET_CATEGORY_ID,
+        topic: `owner:${interaction.user.id}`,
         permissionOverwrites: [
           {
             id: interaction.guild.id,
