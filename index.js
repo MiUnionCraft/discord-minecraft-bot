@@ -242,6 +242,9 @@ client.on('messageCreate', async msg => {
     scheduleClose(msg.channel, ownerId);
 
     if (hadWarning) {
+      clearTimeout(warnings.get(msg.channel.id));
+      warnings.delete(msg.channel.id);
+      
       try {
         await msg.author.send({
           embeds: [
