@@ -239,15 +239,19 @@ client.on('messageCreate', msg => {
   if (msg.author.id === ownerId) {
     const hadWarning = warnings.has(msg.channel.id);
     
-    scheduleClose(msg.channel);
+    scheduleClose(msg.channel, ownerId);
 
     if (hadWarning) {
-      msg.channel.send({
-        embeds: [
-          baseEmbed()
-            .setDescription('🔄 Has respondido a tiempo.\nLa inactividad del ticket ha sido reiniciada.')
-        ]
-      }).catch(() => {});
+      try {
+        await msg.author.send({
+          embeds: [
+            baseEmbed()
+              .setDescription('🔄 Has respondido a tiempo.\nLa inactividad del ticket ha sido reiniciada.')
+          ]
+        });
+      } catch (e) {
+        console.log(`No se pudo enviar DM al usuario ${ownerId}`);
+      }
     }
   }
 });
