@@ -53,6 +53,7 @@ const baseEmbed = () =>
 ======================= */
 const timeouts = new Map();
 const reminderIntervals = new Map();
+const slaTimers = new Map();
 
 const INACTIVITY = Number(process.env.TICKET_INACTIVITY_MINUTES) || 1140;
 const WARNING = Number(process.env.TICKET_WARNING_MINUTES) || 10;
@@ -94,6 +95,12 @@ function logVerify(guild, user, success, reason) {
    CIERRE + LOG HTML
 ======================= */
 async function closeTicket(channel, reason) {
+  const sla = slaTimers.get(channel.id);
+  if (sla) {
+    clearTimeout(sla.staffTimer);
+    clearTimeout(sla.adminTimer);
+    slaTimers.delete(channel.id);
+  }
   if (!channel || !channel.guild) return;
 
   let messages = [];
@@ -183,6 +190,41 @@ function scheduleClose(channel, ownerId) {
   }, 24 * 60 * 60 * 1000);
   
   timeouts.set(channel.id, timeout);
+}
+
+function startSLA(channel) {
+  const staffMinutes = Number(process.env.SLA_STAFF_MINUTES) || 15;
+  const adminMinutes = Number(process.env.SLA_ADMIN_MINUTES) || 60;
+  
+  const staffTimer = setTimeout(() => {
+    channel.send({
+      content: `<@&${process.env.STAFF_ROLE_ID}>`,
+      embeds: [
+        baseEmbed()
+          .setTitle('🚨 SLA EN RIESGO')
+          .setDescription(
+            'Este ticket **no ha sido reclamado**.\n' +
+            `⏱️ Tiempo sin atención: **${staffMinutes} minutos**`
+          )
+          .setColor(0xf97316)
+      ]
+    }).catch(() => {});
+  }, staffMinutes * 60 * 1000);
+  const adminTimer = setTimeout(() => {
+    channel.send({
+      content: `<@&${process.env.ADMIN_ROLE_ID}>`,
+      embeds: [
+        baseEmbed()
+          .setTitle('⛔ SLA INCUMPLIDO')
+          .setDescription(
+            'Este ticket sigue sin ser atendido.\n' +
+            `⏱️ Tiempo total: **${adminMinutes} minutos**`
+          )
+          .setColor(0xef4444)
+      ]
+    }).catch(() => {});
+  }, adminMinutes * 60 * 1000);
+  slaTimers.set(channel.id, { staffTimer, adminTimer });
 }
 
 /* =======================
@@ -355,6 +397,7 @@ client.on('interactionCreate', async interaction => {
       });
 
       scheduleClose(channel, interaction.user.id);
+      startSLA(channel);
 
       return interaction.reply({
         embeds: [
@@ -366,6 +409,7 @@ client.on('interactionCreate', async interaction => {
 
     /* ===== RECLAMAR ===== */
     if (interaction.customId === 'reclamar') {
+
       if (!interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID)) {
         return interaction.reply({
           embeds: [
@@ -376,12 +420,23 @@ client.on('interactionCreate', async interaction => {
           ephemeral: true
         });
       }
+      
+      const sla = slaTimers.get(interaction.channel.id);
+      if (sla) {
+        clearTimeout(sla.staffTimer);
+        clearTimeout(sla.adminTimer);
+        slaTimers.delete(interaction.channel.id);
+      }
 
+      const ownerId = interaction.channel.topic?.split('owner:')[1];
+      if (ownerId) scheduleClose(interaction.channel, ownerId);
+      
       return interaction.reply({
         embeds: [
           baseEmbed()
             .setTitle('✋🏻 Ticket Reclamado')
             .setDescription(`Este ticket ha sido reclamado por **${interaction.user.tag}**`)
+            .setColor(0x22c55e)
         ]
       });
     }
