@@ -358,6 +358,7 @@ client.on('interactionCreate', async interaction => {
         ephemeral: true
       });
     }
+    return;
   }
   
   if (interaction.isModalSubmit()) {
@@ -414,6 +415,8 @@ client.on('interactionCreate', async interaction => {
         ephemeral: true
       });
     }
+
+    return;  
   }
     
     /* ===== CREAR TICKET ===== */
