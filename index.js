@@ -7,12 +7,15 @@ const {
   REST,
   Routes,
   EmbedBuilder,
+  ModalBuilder,
+  TextInputBuilder,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
   ChannelType,
   PermissionsBitField,
-  AttachmentBuilder
+  AttachmentBuilder,
+  TextInputStyle
 } = require('discord.js');
 
 const mc = require('minecraft-server-util');
@@ -355,10 +358,91 @@ client.on('interactionCreate', async interaction => {
         ephemeral: true
       });
     }
+    
+  if (interaction.isModalSubmit()) {
+    
+    if (interaction.customId.startsWith('ticket_modal_')) {
+      const type = interaction.customId.replace('ticket_modal_', '');
 
+      const nick = interaction.fields.getTextInputValue('mc_nick');
+      const modalidad = interaction.fields.getTextInputValue('modalidad');
+      
+      const channel = await interaction.guild.channels.create({
+        name: `ticket-${interaction.user.username}`,
+        type: ChannelType.GuildText,
+        parent: process.env.TICKET_CATEGORY_ID,
+        topic: `owner:${interaction.user.id} | nick:${nick} | modalidad:${modalidad}`,
+        permissionOverwrites: [
+          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+          { id: process.env.STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+        ]
+      });
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId('reclamar')
+          .setLabel('✋🏻 Reclamar')
+          .setStyle(ButtonStyle.Success),
+        new ButtonBuilder()
+          .setCustomId('cerrar')
+          .setLabel('🔒 Cerrar')
+          .setStyle(ButtonStyle.Danger)
+      );
+      
+      await channel.send({
+        content: `📢 <@&${process.env.STAFF_ROLE_ID}>`,
+        embeds: [
+          baseEmbed()
+            .setTitle('🎫 Ticket Abierto')
+            .addFields(
+              { name: '👤 Usuario', value: `${interaction.user}`, inline: true },
+              { name: '🧑 Nick', value: nick, inline: true },
+              { name: '🎮 Modalidad', value: modalidad, inline: true },
+              { name: '📂 Categoría', value: type }
+            )
+        ],
+        components: [row]
+      });
+      
+      scheduleClose(channel, interaction.user.id);
+      startSLA(channel);
+
+      return interaction.reply({
+        embeds: [baseEmbed().setDescription('✅ Ticket creado correctamente')],
+        ephemeral: true
+      });
+    }
+  }
+    
     /* ===== CREAR TICKET ===== */
     if (interaction.customId.startsWith('ticket_')) {
       const type = interaction.customId.split('_')[1];
+
+      const modal = new ModalBuilder()
+        .setCustomId(`ticket_modal_${type}`)
+        .setTitle('🎫 Crear Ticket');
+
+      const nickInput = new TextInputBuilder()
+        .setCustomId('mc_nick')
+        .setLabel('Nick de Minecraft')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+      
+      const modeInput = new TextInputBuilder()
+        .setCustomId('modalidad')
+        .setLabel('Modalidad (Survival, SkyBlock, etc.)')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true);
+      
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(nickInput),
+        new ActionRowBuilder().addComponents(modeInput)
+      );
+      
+      return interaction.showModal(modal);
+      
+    }
 
       const channel = await interaction.guild.channels.create({
         name: `ticket-${interaction.user.username}`,
