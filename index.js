@@ -467,17 +467,7 @@ client.on('interactionCreate', async interaction => {
     new ButtonBuilder()
       .setCustomId('cerrar')
       .setLabel('🔒 Cerrar')
-      .setStyle(ButtonStyle.Danger),
-
-    new ButtonBuilder()
-      .setCustomId('info_reclamo')
-      .setLabel('⚠️ ¿Quién reclamó?')
-      .setStyle(ButtonStyle.Secondary),
-    
-    new ButtonBuilder()
-      .setCustomId('info_cierre')
-      .setLabel('⛔ ¿Quién cerró?')
-      .setStyle(ButtonStyle.Secondary)
+      .setStyle(ButtonStyle.Danger)
   );
     
     await channel.send({
