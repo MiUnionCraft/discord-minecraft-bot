@@ -590,7 +590,9 @@ client.on('interactionCreate', async interaction => {
         embeds: [
           baseEmbed()
             .setTitle('🌐 IP del Servidor')
-            .setDescription(`play.miunioncraft.com`)
+            .setDescription(
+              '`play.miunioncraft.com`'
+            )
         ]
       });
     }
