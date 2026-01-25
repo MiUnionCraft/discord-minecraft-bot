@@ -56,7 +56,7 @@ const reminderIntervals = new Map();
 const slaTimers = new Map();
 
 const INACTIVITY = Number(process.env.TICKET_INACTIVITY_MINUTES) || 1140;
-const WARNING = Number(process.env.TICKET_WARNING_MINUTES) || 10;
+const WARNING = Number(process.env.TICKET_WARNING_MINUTES) || 30;
 
 /* =======================
    HTML ESCAPE (SEGURO)
@@ -176,12 +176,13 @@ function scheduleClose(channel, ownerId) {
         baseEmbed()
           .setTitle('⏰ Inactividad detectada')
           .setDescription(
-            'Este ticket no ha recibido respuesta del creador.\n\n' +
+            'Este ticket está inactivo, aún no hay respuesta.\n\n' +
             '🕒 **Si no respondes, se cerrará automáticamente en 24 horas.**'
+          .setColor(0xe70000)
           )
       ]
     }).catch(() => {});
-  }, 10 * 60 * 1000);
+  }, 30 * 60 * 1000);
 
   reminderIntervals.set(channel.id, interval);
 
