@@ -177,7 +177,7 @@ function scheduleClose(channel, ownerId) {
           .setTitle('⏰ Inactividad detectada')
           .setDescription(
             'Este ticket está inactivo, aún no hay respuesta.\n\n' +
-            '🕒 **Si no respondes, se cerrará automáticamente en 24 horas.**'
+            '🕒 **Si no respondes, se cerrará automáticamente en** `24 horas`**.**'
           .setColor(0xe70000)
           )
       ]
@@ -387,7 +387,7 @@ client.on('interactionCreate', async interaction => {
         content: `📢 <@&${process.env.STAFF_ROLE_ID}>`,
         embeds: [
           baseEmbed()
-            .setTitle('🎫 Ticket Abierto')
+            .setTitle('🟢 Ticket Abierto')
             .setDescription(
               `👤 Usuario: ${interaction.user}\n` +
               `📂 Categoría: **${type}**\n\n` +
@@ -576,7 +576,7 @@ client.on('interactionCreate', async interaction => {
         embeds: [
           baseEmbed()
             .setTitle('📦 Versión')
-            .setDescription(s.version.name)
+            .setDescription(s.version.name\n\n**Recomendado:** `1.20.4`)
         ]
       });
     }
@@ -587,7 +587,7 @@ client.on('interactionCreate', async interaction => {
         embeds: [
           baseEmbed()
             .setTitle('🌐 IP del Servidor')
-            .setDescription(process.env.MC_IP)
+            .setDescription(`process.env.MC_IP`)
         ]
       });
     }
