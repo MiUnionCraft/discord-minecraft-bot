@@ -577,8 +577,8 @@ client.on('interactionCreate', async interaction => {
           baseEmbed()
             .setTitle('📦 Versión')
             .setDescription(
-              s.version.name +
-              '\n\n**Recomendado:** `1.20.4`'
+              '`1.16.5 - 1.21.5`' +
+              '\n\n**Recomendado:** `1.20.4`\n'
             )
         ]
       });
@@ -590,7 +590,7 @@ client.on('interactionCreate', async interaction => {
         embeds: [
           baseEmbed()
             .setTitle('🌐 IP del Servidor')
-            .setDescription(`process.env.MC_IP`)
+            .setDescription(`play.miunioncraft.com`)
         ]
       });
     }
