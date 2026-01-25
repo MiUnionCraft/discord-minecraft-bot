@@ -458,7 +458,28 @@ client.on('interactionCreate', async interaction => {
         { id: process.env.STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
       ]
     });
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('reclamar')
+      .setLabel('Reclamar')
+      .setStyle(ButtonStyle.Primary),
 
+    new ButtonBuilder()
+      .setCustomId('info_reclamo')
+      .setLabel('¿Quién reclamó?')
+      .setStyle(ButtonStyle.Secondary),
+    
+    new ButtonBuilder()
+      .setCustomId('info_cierre')
+      .setLabel('¿Quién cerró?')
+      .setStyle(ButtonStyle.Secondary),
+
+    new ButtonBuilder()
+      .setCustomId('cerrar')
+      .setLabel('Cerrar')
+      .setStyle(ButtonStyle.Danger)
+  );
+    
     await channel.send({
       content: `<@&${process.env.STAFF_ROLE_ID}>`,
       embeds: [
@@ -471,6 +492,7 @@ client.on('interactionCreate', async interaction => {
             { name: '📂 Categoría', value: type }
           )
       ]
+      components: [row]
     });
 
     scheduleClose(channel, interaction.user.id);
