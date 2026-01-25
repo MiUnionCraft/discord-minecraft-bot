@@ -491,7 +491,7 @@ client.on('interactionCreate', async interaction => {
             { name: '🎮 Modalidad', value: modalidad, inline: true },
             { name: '📂 Categoría', value: type }
           )
-      ]
+      ],
       components: [row]
     });
 
