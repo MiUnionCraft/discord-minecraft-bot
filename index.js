@@ -205,9 +205,9 @@ function startSLA(channel) {
       content: `<@&${process.env.STAFF_ROLE_ID}>`,
       embeds: [
         baseEmbed()
-          .setTitle('🚨 SLA EN RIESGO')
+          .setTitle('🚨 SIN RECLAMAR')
           .setDescription(
-            'Este ticket **no ha sido reclamado**.\n' +
+            'Este ticket **no ha sido reclamado** por un <@&914728126066622545>, espere unos momentos... pronto lo atenderemos.\n' +
             `⏱️ Tiempo sin atención: **${staffMinutes} minutos**`
           )
           .setColor(0xf97316)
@@ -219,9 +219,9 @@ function startSLA(channel) {
       content: `<@&${process.env.ADMIN_ROLE_ID}>`,
       embeds: [
         baseEmbed()
-          .setTitle('⛔ SLA INCUMPLIDO')
+          .setTitle('⛔ NO HAN RECLAMADO')
           .setDescription(
-            'Este ticket sigue sin ser atendido.\n' +
+            'Este ticket sigue sin ser atendido por un <@&914728126066622545>, por favor espere... pronto será atendido por un superior.\n' +
             `⏱️ Tiempo total: **${adminMinutes} minutos**`
           )
           .setColor(0xef4444)
@@ -373,7 +373,7 @@ client.on('interactionCreate', async interaction => {
       
       const modeInput = new TextInputBuilder()
         .setCustomId('modalidad')
-        .setLabel('Modalidad (Survival, SkyBlock, etc.)')
+        .setLabel('Modalidad (Survival, BoxPvP, etc.)')
         .setStyle(TextInputStyle.Short)
         .setRequired(true);
       
@@ -461,23 +461,23 @@ client.on('interactionCreate', async interaction => {
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId('reclamar')
-      .setLabel('Reclamar')
-      .setStyle(ButtonStyle.Primary),
+      .setLabel('🤚🏻 Reclamar')
+      .setStyle(ButtonStyle.Success),
+
+    new ButtonBuilder()
+      .setCustomId('cerrar')
+      .setLabel('🔒 Cerrar')
+      .setStyle(ButtonStyle.Danger),
 
     new ButtonBuilder()
       .setCustomId('info_reclamo')
-      .setLabel('¿Quién reclamó?')
+      .setLabel('⚠️ ¿Quién reclamó?')
       .setStyle(ButtonStyle.Secondary),
     
     new ButtonBuilder()
       .setCustomId('info_cierre')
-      .setLabel('¿Quién cerró?')
-      .setStyle(ButtonStyle.Secondary),
-
-    new ButtonBuilder()
-      .setCustomId('cerrar')
-      .setLabel('Cerrar')
-      .setStyle(ButtonStyle.Danger)
+      .setLabel('⛔ ¿Quién cerró?')
+      .setStyle(ButtonStyle.Secondary)
   );
     
     await channel.send({
@@ -487,7 +487,7 @@ client.on('interactionCreate', async interaction => {
           .setTitle('🎫 Ticket Abierto')
           .addFields(
             { name: '👤 Usuario', value: `${interaction.user}`, inline: true },
-            { name: '🧑 Nick', value: nick, inline: true },
+            { name: '🪪 Nick', value: nick, inline: true },
             { name: '🎮 Modalidad', value: modalidad, inline: true },
             { name: '📂 Categoría', value: type }
           )
