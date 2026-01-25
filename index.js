@@ -358,7 +358,8 @@ client.on('interactionCreate', async interaction => {
         ephemeral: true
       });
     }
-    
+  }
+  
   if (interaction.isModalSubmit()) {
     
     if (interaction.customId.startsWith('ticket_modal_')) {
