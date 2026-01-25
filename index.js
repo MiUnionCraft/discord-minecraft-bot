@@ -576,7 +576,10 @@ client.on('interactionCreate', async interaction => {
         embeds: [
           baseEmbed()
             .setTitle('📦 Versión')
-            .setDescription(s.version.name\n\n**Recomendado:** `1.20.4`)
+            .setDescription(
+              s.version.name +
+              '\n\n**Recomendado:** `1.20.4`'
+            )
         ]
       });
     }
