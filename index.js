@@ -389,21 +389,42 @@ client.on('interactionCreate', async interaction => {
     if (interaction.customId === 'reclamar') {
 
       if (!interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID)) {
-        return interaction.reply({ content: '❌ Solo staff', ephemeral: true });
+        return interaction.reply({
+          content: '❌ Solo el staff puede reclamar este ticket',
+          ephemeral: true
+        });
       }
-      
-      const sla = slaTimers.get(interaction.channel.id);
+
+      const channel = interaction.channel;
+
+      // ❌ Ya reclamado
+      if (channel.topic?.includes('staff:')) {
+        return interaction.reply({
+          content: '⚠️ Este ticket ya fue reclamado',
+          ephemeral: true
+        });
+      }
+      // 🧠 Guardar staff en el topic
+      const newTopic = `${channel.topic || ''} | staff:${interaction.user.id}`;
+      await channel.setTopic(newTopic);
+
+      // ⏱️ Cancelar SLA
+      const sla = slaTimers.get(channel.id);
       if (sla) {
         clearTimeout(sla.staffTimer);
         clearTimeout(sla.adminTimer);
-        slaTimers.delete(interaction.channel.id);
+        slaTimers.delete(channel.id);
       }
 
       return interaction.reply({
         embeds: [
           baseEmbed()
             .setTitle('✋🏻 Ticket Reclamado')
-            .setDescription(`Reclamado por **${interaction.user.tag}**`)
+            .setDescription(
+              `👨‍💼 Staff: **${interaction.user.tag}**\n` +
+              `🟢 Ya estás siendo atendido.`
+            )
+            .setColor(0x22c55e)
         ]
       });
     }
