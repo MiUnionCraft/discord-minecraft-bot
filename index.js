@@ -333,6 +333,7 @@ client.on('interactionCreate', async interaction => {
       });
     }
 
+    /* ===== CAPTCHA ===== */
     if (interaction.customId.startsWith('captcha_')) {
       const data = captchaData.get(interaction.user.id);
       if (!data)
@@ -353,75 +354,12 @@ client.on('interactionCreate', async interaction => {
       captchaData.delete(interaction.user.id);
       logVerify(interaction.guild, interaction.user, true, 'Verificado');
 
-      return interaction.reply({
-        content: '✅ Verificación completada',
-        ephemeral: true
-      });
-    }
-    return;
-  }
-  
-  if (interaction.isModalSubmit()) {
-    
-    if (interaction.customId.startsWith('ticket_modal_')) {
-      const type = interaction.customId.replace('ticket_modal_', '');
-
-      const nick = interaction.fields.getTextInputValue('mc_nick');
-      const modalidad = interaction.fields.getTextInputValue('modalidad');
-      
-      const channel = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        parent: process.env.TICKET_CATEGORY_ID,
-        topic: `owner:${interaction.user.id} | nick:${nick} | modalidad:${modalidad}`,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-          { id: process.env.STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-        ]
-      });
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('reclamar')
-          .setLabel('✋🏻 Reclamar')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId('cerrar')
-          .setLabel('🔒 Cerrar')
-          .setStyle(ButtonStyle.Danger)
-      );
-      
-      await channel.send({
-        content: `📢 <@&${process.env.STAFF_ROLE_ID}>`,
-        embeds: [
-          baseEmbed()
-            .setTitle('🎫 Ticket Abierto')
-            .addFields(
-              { name: '👤 Usuario', value: `${interaction.user}`, inline: true },
-              { name: '🧑 Nick', value: nick, inline: true },
-              { name: '🎮 Modalidad', value: modalidad, inline: true },
-              { name: '📂 Categoría', value: type }
-            )
-        ],
-        components: [row]
-      });
-      
-      scheduleClose(channel, interaction.user.id);
-      startSLA(channel);
-
-      return interaction.reply({
-        embeds: [baseEmbed().setDescription('✅ Ticket creado correctamente')],
-        ephemeral: true
-      });
+      return interaction.reply({ content: '✅ Verificación completada', ephemeral: true });
     }
 
-    return;  
-  }
-    
-    /* ===== CREAR TICKET ===== */
+    /* ===== BOTONES TICKET ===== */
     if (interaction.customId.startsWith('ticket_')) {
-      const type = interaction.customId.split('_')[1];
+      const type = interaction.customId.replace('ticket_', '');
 
       const modal = new ModalBuilder()
         .setCustomId(`ticket_modal_${type}`)
@@ -444,70 +382,14 @@ client.on('interactionCreate', async interaction => {
         new ActionRowBuilder().addComponents(modeInput)
       );
       
-      return interaction.showModal(modal);
-      
-    }
-
-      const channel = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username}`,
-        type: ChannelType.GuildText,
-        parent: process.env.TICKET_CATEGORY_ID,
-        topic: `owner:${interaction.user.id}`,
-        permissionOverwrites: [
-          { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-          { id: process.env.STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
-        ]
-      });
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId('reclamar')
-          .setLabel('✋🏻 Reclamar')
-          .setStyle(ButtonStyle.Success),
-        new ButtonBuilder()
-          .setCustomId('cerrar')
-          .setLabel('🔒 Cerrar')
-          .setStyle(ButtonStyle.Danger)
-      );
-
-      await channel.send({
-        content: `📢 <@&${process.env.STAFF_ROLE_ID}>`,
-        embeds: [
-          baseEmbed()
-            .setTitle('🟢 Ticket Abierto')
-            .setDescription(
-              `👤 Usuario: ${interaction.user}\n` +
-              `📂 Categoría: **${type}**\n\n` +
-              `Ten paciencia, pronto serás atendido por nuestros staffs en línea, recuerda ser claro y directo con lo que necesitas.`
-            )
-        ],
-        components: [row]
-      });
-
-      scheduleClose(channel, interaction.user.id);
-      startSLA(channel);
-
-      return interaction.reply({
-        embeds: [
-          baseEmbed().setDescription('✅ Ticket creado correctamente')
-        ],
-        ephemeral: true
-      });
+      return interaction.showModal(modal);  
     }
 
     /* ===== RECLAMAR ===== */
     if (interaction.customId === 'reclamar') {
 
       if (!interaction.member.roles.cache.has(process.env.STAFF_ROLE_ID)) {
-        return interaction.reply({
-          embeds: [
-            baseEmbed()
-              .setDescription('❌ Solo el staff puede reclamar')
-              .setColor(0xef4444)
-          ],
-          ephemeral: true
-        });
+        return interaction.reply({ content: '❌ Solo staff', ephemeral: true });
       }
       
       const sla = slaTimers.get(interaction.channel.id);
@@ -517,30 +399,67 @@ client.on('interactionCreate', async interaction => {
         slaTimers.delete(interaction.channel.id);
       }
 
-      const ownerId = interaction.channel.topic?.split('owner:')[1];
-      if (ownerId) scheduleClose(interaction.channel, ownerId);
-      
       return interaction.reply({
         embeds: [
           baseEmbed()
             .setTitle('✋🏻 Ticket Reclamado')
-            .setDescription(`Este ticket ha sido reclamado por **${interaction.user.tag}**`)
-            .setColor(0x22c55e)
+            .setDescription(`Reclamado por **${interaction.user.tag}**`)
         ]
       });
     }
 
     /* ===== CERRAR ===== */
     if (interaction.customId === 'cerrar') {
-      return closeTicket(
-        interaction.channel,
-        '🔒 Ticket cerrado manualmente por el staff'
-      );
+      return closeTicket(interaction.channel, '🔒 Ticket cerrado por staff');
     }
 
     return;
   }
+  /* =======================
+     MODAL SUBMIT
+  ======================= */
+  if (interaction.isModalSubmit()) {
+    
+    if (!interaction.customId.startsWith('ticket_modal_')) return;
+    
+    const type = interaction.customId.replace('ticket_modal_', '');
+    const nick = interaction.fields.getTextInputValue('mc_nick');
+    const modalidad = interaction.fields.getTextInputValue('modalidad');
 
+    const channel = await interaction.guild.channels.create({
+      name: `ticket-${interaction.user.username}`,
+      type: ChannelType.GuildText,
+      parent: process.env.TICKET_CATEGORY_ID,
+      topic: `owner:${interaction.user.id} | nick:${nick} | modalidad:${modalidad}`,
+      permissionOverwrites: [
+        { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
+        { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+        { id: process.env.STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+      ]
+    });
+
+    await channel.send({
+      content: `<@&${process.env.STAFF_ROLE_ID}>`,
+      embeds: [
+        baseEmbed()
+          .setTitle('🎫 Ticket Abierto')
+          .addFields(
+            { name: '👤 Usuario', value: `${interaction.user}`, inline: true },
+            { name: '🧑 Nick', value: nick, inline: true },
+            { name: '🎮 Modalidad', value: modalidad, inline: true },
+            { name: '📂 Categoría', value: type }
+          )
+      ]
+    });
+
+    scheduleClose(channel, interaction.user.id);
+    startSLA(channel);
+    
+    return interaction.reply({
+      embeds: [baseEmbed().setDescription('✅ Ticket creado correctamente')],
+      ephemeral: true
+    });
+  }
   /* =======================
      SLASH COMMANDS
   ======================= */
